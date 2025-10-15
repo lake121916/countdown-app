@@ -8,7 +8,7 @@ import { AuthProvider, useAuth } from "./components/AuthContext";
 import EventList from "./components/EventList";
 import AdminPanel from "./components/AdminPanel";
 import Login from "./components/login";
-import Signup from "./components/signup";
+import Signup from './components/Signup';
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";  // ✅ import Footer
 import ApprovalPanel from "./components/ApprovalPanel"; // Head approval panel

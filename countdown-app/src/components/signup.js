@@ -3,7 +3,7 @@ import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useNavigate, Link } from 'react-router-dom';
-//import './Signup.css';
+import './Signup.css';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -16,6 +16,8 @@ const Signup = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const navigate = useNavigate();
 
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -43,6 +45,9 @@ const Signup = () => {
     if (name === 'password') {
       setPasswordStrength(calculatePasswordStrength(value));
     }
+
+    // Clear error when user starts typing
+    if (error) setError('');
   };
 
   const handleSignup = async (e) => {
@@ -69,6 +74,11 @@ const Signup = () => {
       return;
     }
 
+    if (!agreedToTerms) {
+      setError('Please agree to the Terms of Service and Privacy Policy.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -78,21 +88,30 @@ const Signup = () => {
       const fullPhone = `${formData.countryCode}${formData.phoneNumber}`;
 
       await setDoc(doc(db, 'users', userCredential.user.uid), {
-        fullName: formData.fullName,
+        fullName: formData.fullName.trim(),
         phoneNumber: fullPhone,
-        email: formData.email,
+        email: formData.email.toLowerCase(),
         isAdmin: false,
         createdAt: new Date().toISOString(),
+        emailVerified: false,
       });
 
-      alert('Verification email sent! Please check your inbox.');
+      alert('Verification email sent! Please check your inbox to verify your email before signing in.');
       await auth.signOut();
       navigate('/login');
     } catch (err) {
-      setError(err.message.includes('email-already-in-use') 
-        ? 'This email is already registered. Please use a different email or login.'
-        : err.message
-      );
+      console.error('Signup error:', err);
+      if (err.code === 'auth/email-already-in-use') {
+        setError('This email is already registered. Please use a different email or login.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password is too weak. Please choose a stronger password.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address format.');
+      } else if (err.code === 'auth/network-request-failed') {
+        setError('Network error. Please check your internet connection.');
+      } else {
+        setError('An error occurred during signup. Please try again.');
+      }
     }
 
     setLoading(false);
@@ -110,8 +129,27 @@ const Signup = () => {
     return 'Strong';
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const handlePhoneInput = (e) => {
+    // Allow only numbers
+    const value = e.target.value.replace(/[^0-9]/g, '');
+    setFormData(prev => ({
+      ...prev,
+      phoneNumber: value
+    }));
+  };
+
   return (
     <div className="signup-page">
+      <div className="background-shapes">
+        <div className="shape shape-1"></div>
+        <div className="shape shape-2"></div>
+        <div className="shape shape-3"></div>
+      </div>
+
       <div className="signup-container">
         <div className="signup-header">
           <div className="signup-logo">
@@ -125,13 +163,21 @@ const Signup = () => {
         {error && (
           <div className="error-message">
             <i className="fas fa-exclamation-circle"></i>
-            {error}
+            <span>{error}</span>
+            <button 
+              className="error-close" 
+              onClick={() => setError('')}
+              aria-label="Close error message"
+            >
+              <i className="fas fa-times"></i>
+            </button>
           </div>
         )}
 
         <form onSubmit={handleSignup} className="signup-form">
-          <div className="form-group">
-            <div className="input-wrapper">
+          {/* Full Name Field */}
+          <div className="input-group">
+            <div className="input-wrapper with-icon-left">
               <i className="fas fa-user input-icon"></i>
               <input
                 type="text"
@@ -141,46 +187,54 @@ const Signup = () => {
                 placeholder="Enter your full name"
                 required
                 className="form-input"
+                disabled={loading}
               />
               <label className="form-label">Full Name</label>
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label-static">Phone Number</label>
+          {/* Phone Number Field */}
+          <div className="input-group">
             <div className="phone-input-group">
-              <div className="country-select-wrapper">
+              <div className="country-select-wrapper input-wrapper with-icon-left">
                 <i className="fas fa-globe input-icon"></i>
                 <select
                   name="countryCode"
                   value={formData.countryCode}
                   onChange={handleChange}
                   className="country-select"
+                  disabled={loading}
                 >
-                  <option value="+251">🇪🇹 +251 Ethiopia</option>
-                  <option value="+1">🇺🇸 +1 USA</option>
-                  <option value="+44">🇬🇧 +44 UK</option>
-                  <option value="+91">🇮🇳 +91 India</option>
-                  <option value="+254">🇰🇪 +254 Kenya</option>
+                  <option value="+251">🇪🇹 +251</option>
+                  <option value="+1">🇺🇸 +1</option>
+                  <option value="+44">🇬🇧 +44</option>
+                  <option value="+91">🇮🇳 +91</option>
+                  <option value="+254">🇰🇪 +254</option>
                 </select>
+                <label className="form-label">Code</label>
               </div>
-              <div className="phone-number-wrapper">
+              <div className="phone-number-wrapper input-wrapper with-icon-left">
                 <i className="fas fa-phone input-icon"></i>
                 <input
                   type="tel"
                   name="phoneNumber"
                   value={formData.phoneNumber}
-                  onChange={handleChange}
+                  onChange={handlePhoneInput}
                   placeholder="912345678"
                   required
                   className="form-input"
+                  disabled={loading}
+                  pattern="[0-9]*"
+                  inputMode="numeric"
                 />
+                <label className="form-label">Phone Number</label>
               </div>
             </div>
           </div>
 
-          <div className="form-group">
-            <div className="input-wrapper">
+          {/* Email Field */}
+          <div className="input-group">
+            <div className="input-wrapper with-icon-left">
               <i className="fas fa-envelope input-icon"></i>
               <input
                 type="email"
@@ -190,76 +244,105 @@ const Signup = () => {
                 placeholder="you@example.com"
                 required
                 className="form-input"
+                disabled={loading}
               />
               <label className="form-label">Email Address</label>
             </div>
           </div>
 
-          <div className="form-group">
-            <div className="input-wrapper">
+          {/* Password Field */}
+          <div className="input-group">
+            <div className="input-wrapper with-icon-left">
               <i className="fas fa-lock input-icon"></i>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Create a strong password"
                 required
                 className="form-input"
+                disabled={loading}
               />
               <label className="form-label">Password</label>
-            </div>
-            
-            {formData.password && (
-              <div className="password-strength">
-                <div className="strength-bar">
-                  <div 
-                    className="strength-fill"
-                    style={{
-                      width: `${passwordStrength}%`,
-                      backgroundColor: getPasswordStrengthColor()
-                    }}
-                  ></div>
-                </div>
-                <div className="strength-text">
-                  Password strength: <span style={{ color: getPasswordStrengthColor() }}>
-                    {getPasswordStrengthText()}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <div className="password-requirements">
-              <h4>Password must contain:</h4>
-              <ul>
-                <li className={formData.password.length >= 8 ? 'met' : ''}>
-                  <i className={`fas ${formData.password.length >= 8 ? 'fa-check' : 'fa-times'}`}></i>
-                  At least 8 characters
-                </li>
-                <li className={/[a-z]/.test(formData.password) ? 'met' : ''}>
-                  <i className={`fas ${/[a-z]/.test(formData.password) ? 'fa-check' : 'fa-times'}`}></i>
-                  One lowercase letter
-                </li>
-                <li className={/[A-Z]/.test(formData.password) ? 'met' : ''}>
-                  <i className={`fas ${/[A-Z]/.test(formData.password) ? 'fa-check' : 'fa-times'}`}></i>
-                  One uppercase letter
-                </li>
-                <li className={/[0-9]/.test(formData.password) ? 'met' : ''}>
-                  <i className={`fas ${/[0-9]/.test(formData.password) ? 'fa-check' : 'fa-times'}`}></i>
-                  One number
-                </li>
-                <li className={/[@$!%*?&]/.test(formData.password) ? 'met' : ''}>
-                  <i className={`fas ${/[@$!%*?&]/.test(formData.password) ? 'fa-check' : 'fa-times'}`}></i>
-                  One special character (@$!%*?&)
-                </li>
-              </ul>
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={togglePasswordVisibility}
+                disabled={loading}
+              >
+                <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+              </button>
             </div>
           </div>
 
+          {/* Password Strength Indicator */}
+          {formData.password && (
+            <div className="password-strength">
+              <div className="strength-bar">
+                <div 
+                  className="strength-fill"
+                  style={{
+                    width: `${passwordStrength}%`,
+                    backgroundColor: getPasswordStrengthColor()
+                  }}
+                ></div>
+              </div>
+              <div className="strength-text">
+                Password strength: 
+                <span style={{ color: getPasswordStrengthColor(), fontWeight: '600', marginLeft: '5px' }}>
+                  {getPasswordStrengthText()}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Password Requirements */}
+          <div className="password-requirements">
+            <h4>Password must contain:</h4>
+            <ul>
+              <li className={formData.password.length >= 8 ? 'met' : ''}>
+                <i className={`fas ${formData.password.length >= 8 ? 'fa-check' : 'fa-times'}`}></i>
+                At least 8 characters
+              </li>
+              <li className={/[a-z]/.test(formData.password) ? 'met' : ''}>
+                <i className={`fas ${/[a-z]/.test(formData.password) ? 'fa-check' : 'fa-times'}`}></i>
+                One lowercase letter
+              </li>
+              <li className={/[A-Z]/.test(formData.password) ? 'met' : ''}>
+                <i className={`fas ${/[A-Z]/.test(formData.password) ? 'fa-check' : 'fa-times'}`}></i>
+                One uppercase letter
+              </li>
+              <li className={/[0-9]/.test(formData.password) ? 'met' : ''}>
+                <i className={`fas ${/[0-9]/.test(formData.password) ? 'fa-check' : 'fa-times'}`}></i>
+                One number
+              </li>
+              <li className={/[@$!%*?&]/.test(formData.password) ? 'met' : ''}>
+                <i className={`fas ${/[@$!%*?&]/.test(formData.password) ? 'fa-check' : 'fa-times'}`}></i>
+                One special character (@$!%*?&)
+              </li>
+            </ul>
+          </div>
+
+          {/* Terms Agreement */}
+          <div className="terms-agreement">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                disabled={loading}
+              />
+              <span className="checkmark"></span>
+              I agree to the <a href="#" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="#" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+            </label>
+          </div>
+
+          {/* Submit Button */}
           <button 
             type="submit" 
-            disabled={loading}
-            className={`signup-button ${loading ? 'loading' : ''}`}
+            disabled={loading || !agreedToTerms}
+            className={`signup-button ${loading ? 'loading' : ''} ${!agreedToTerms ? 'disabled' : ''}`}
           >
             {loading ? (
               <>
@@ -277,18 +360,6 @@ const Signup = () => {
 
         <div className="login-redirect">
           <p>Already have an account? <Link to="/login" className="login-link">Sign In</Link></p>
-        </div>
-
-        <div className="signup-footer">
-          <p>By creating an account, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></p>
-        </div>
-      </div>
-
-      <div className="signup-background">
-        <div className="background-shapes">
-          <div className="shape shape-1"></div>
-          <div className="shape shape-2"></div>
-          <div className="shape shape-3"></div>
         </div>
       </div>
     </div>
