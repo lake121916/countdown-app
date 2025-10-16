@@ -157,7 +157,8 @@ const Contact = () => {
               <i className="fab fa-facebook"></i>
               <span>Facebook</span>
             </a>
-            <a href="#" target="_blank" rel="noopener noreferrer">
+            {/* Fixed Twitter link - using the Ministry's official Twitter if available, or removed if not */}
+            <a href="https://twitter.com/mint_ethiopia" target="_blank" rel="noopener noreferrer">
               <i className="fab fa-twitter"></i>
               <span>Twitter</span>
             </a>

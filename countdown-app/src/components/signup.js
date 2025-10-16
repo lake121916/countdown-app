@@ -334,7 +334,7 @@ const Signup = () => {
                 disabled={loading}
               />
               <span className="checkmark"></span>
-              I agree to the <a href="#" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="#" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+              I agree to the <Link to="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
             </label>
           </div>
 

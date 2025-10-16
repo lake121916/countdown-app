@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { db } from "../firebase";
 import "./WorkerDashboard.css";
 import {
@@ -56,7 +56,7 @@ function WorkerDashboard() {
     setSelectedEvent(null);
   };
 
-  const loadSubmittedEvents = async () => {
+  const loadSubmittedEvents = useCallback(async () => {
     if (!currentUser) return;
     try {
       const q = query(
@@ -69,9 +69,9 @@ function WorkerDashboard() {
     } catch (err) {
       console.error("Error loading submitted events:", err);
     }
-  };
+  }, [currentUser]);
 
-  const loadDashboardEvents = async () => {
+  const loadDashboardEvents = useCallback(async () => {
     if (!currentUser) return;
     try {
       const snapshot = await getDocs(
@@ -82,12 +82,12 @@ function WorkerDashboard() {
     } catch (err) {
       console.error("Error loading dashboard events:", err);
     }
-  };
+  }, [currentUser]);
 
   useEffect(() => {
     loadSubmittedEvents();
     loadDashboardEvents();
-  }, []);
+  }, [loadSubmittedEvents, loadDashboardEvents]);
 
   const saveEvent = async () => {
     if (!title || !eventName || !date || !time || !description || !location) {

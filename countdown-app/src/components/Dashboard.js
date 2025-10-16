@@ -1,5 +1,5 @@
 // src/components/Dashboard.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "./AuthContext";
 import { db } from "../firebase";
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
@@ -10,7 +10,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   // Fetch dashboard events
-  const fetchDashboardEvents = async () => {
+  const fetchDashboardEvents = useCallback(async () => {
     if (!currentUser) return;
     setLoading(true);
     try {
@@ -25,11 +25,11 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUser]);
 
   useEffect(() => {
     fetchDashboardEvents();
-  }, [currentUser]);
+  }, [fetchDashboardEvents]);
 
   // Remove event
   const removeFromDashboard = async (eventId) => {

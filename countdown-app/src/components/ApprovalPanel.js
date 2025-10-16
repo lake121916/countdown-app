@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { db } from "../firebase";
 import "./ApprovalPanel.css";
 import {
@@ -58,31 +58,32 @@ function HeadApprovalPanel() {
     { value: "other", label: "Other" },
   ];
 
-  // ------------------ FETCH ------------------
-  const fetchPendingEvents = async () => {
+  // ------------------ FETCH FUNCTIONS ------------------
+  const fetchPendingEvents = useCallback(async () => {
     const q = query(collection(db, "events"), where("status", "==", "pending_head"));
     const snapshot = await getDocs(q);
     setPendingEvents(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-  };
+  }, []);
 
-  const fetchSubmittedEvents = async () => {
+  const fetchSubmittedEvents = useCallback(async () => {
     if (!currentUser) return;
     const q = query(collection(db, "events"), where("proposedById", "==", currentUser.uid));
     const snapshot = await getDocs(q);
     setSubmittedEvents(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-  };
+  }, [currentUser]);
 
-  const fetchDashboardEvents = async () => {
+  const fetchDashboardEvents = useCallback(async () => {
     if (!currentUser) return;
     const snapshot = await getDocs(collection(db, "users", currentUser.uid, "dashboard"));
     setDashboardEvents(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-  };
+  }, [currentUser]);
 
+  // ------------------ EFFECT HOOK ------------------
   useEffect(() => {
     fetchPendingEvents();
     fetchSubmittedEvents();
     fetchDashboardEvents();
-  }, [currentUser]);
+  }, [fetchPendingEvents, fetchSubmittedEvents, fetchDashboardEvents]);
 
   // ------------------ ACTIONS ------------------
   const editEvent = (event) => {

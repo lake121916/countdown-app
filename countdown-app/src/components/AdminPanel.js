@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Users,
   CalendarDays,
@@ -32,16 +32,8 @@ const AdminPanel = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
-  // ------------------- LOAD DATA -------------------
-  useEffect(() => {
-    if (currentUser?.isAdmin) {
-      fetchUsers();
-      fetchEvents();
-      fetchDashboard();
-    }
-  }, [currentUser]);
-
-  const fetchUsers = async () => {
+  // ------------------- DATA FETCHING FUNCTIONS -------------------
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
       const snapshot = await getDocs(collection(db, "users"));
@@ -50,9 +42,9 @@ const AdminPanel = () => {
       console.error("Error fetching users:", err);
     }
     setLoading(false);
-  };
+  }, []);
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     setLoading(true);
     try {
       const snapshot = await getDocs(collection(db, "events"));
@@ -69,9 +61,9 @@ const AdminPanel = () => {
       console.error("Error fetching events:", err);
     }
     setLoading(false);
-  };
+  }, []);
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = useCallback(async () => {
     if (!currentUser) return;
     try {
       const snapshot = await getDocs(
@@ -83,7 +75,16 @@ const AdminPanel = () => {
     } catch (err) {
       console.error("Error fetching dashboard:", err);
     }
-  };
+  }, [currentUser]);
+
+  // ------------------- LOAD DATA -------------------
+  useEffect(() => {
+    if (currentUser?.isAdmin) {
+      fetchUsers();
+      fetchEvents();
+      fetchDashboard();
+    }
+  }, [currentUser, fetchUsers, fetchEvents, fetchDashboard]);
 
   // ------------------- HELPERS -------------------
   const formatDate = (date) => {
