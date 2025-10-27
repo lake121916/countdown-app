@@ -54,20 +54,11 @@ const Home = () => {
         let list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
         const now = new Date();
-        
-        // Separate upcoming and past events
-        const upcomingEvents = list
+        list = list
           .filter((e) => new Date(e.fullDate) >= now)
           .sort((a, b) => new Date(a.fullDate) - new Date(b.fullDate));
 
-        const pastEvents = list
-          .filter((e) => new Date(e.fullDate) < now)
-          .sort((a, b) => new Date(b.fullDate) - new Date(a.fullDate));
-
-        // Combine upcoming first, then past events
-        const allEvents = [...upcomingEvents, ...pastEvents];
-        
-        setEvents(allEvents);
+        setEvents(list);
       } catch (err) {
         console.error("fetchEvents error:", err);
         alert("Error loading events: " + (err.message || err));
@@ -169,14 +160,6 @@ const Home = () => {
     });
   };
 
-  // Check if event is upcoming or past
-  const isEventUpcoming = (eventDate) => {
-    return new Date(eventDate) >= new Date();
-  };
-
-  // Get upcoming events count for stats
-  const upcomingEventsCount = events.filter(event => isEventUpcoming(event.fullDate)).length;
-
   return (
     <div className="home-container">
       <div className="page-content">
@@ -193,7 +176,7 @@ const Home = () => {
             <p className="hero-subtitle">Discover Ethiopia's Premier Events</p>
             <p>Join the nation's most exciting conferences, exhibitions, and cultural gatherings</p>
             
-            {events.length > 0 && events[0] && isEventUpcoming(events[0].fullDate) ? (
+            {events.length > 0 ? (
               <div className="countdown-timer">
                 {/* Event title above countdown */}
                 <div className="event-title">{events[0].title}</div>
@@ -247,11 +230,11 @@ const Home = () => {
           </div>
         </section>
 
-        {/* All Events Section */}
-        <section className="all-events">
+        {/* Upcoming Events */}
+        <section className="featured-events">
           <div className="section-header">
-            <h2>All Events</h2>
-            <p>Discover all approved events - upcoming and past</p>
+            <h2>Upcoming Events</h2>
+            <p>Discover what's happening across Ethiopia</p>
           </div>
           
           {loadingEvents ? (
@@ -262,58 +245,69 @@ const Home = () => {
           ) : events.length === 0 ? (
             <div className="no-events">
               <div className="no-events-icon">📅</div>
-              <h3>No events available</h3>
-              <p>There are no approved events at the moment. Check back later!</p>
+              <h3>No upcoming events</h3>
+              <p>Check back later for new events being added to our platform.</p>
             </div>
           ) : (
-            <div className="events-container">
-              {/* Upcoming Events */}
-              {events.some(event => isEventUpcoming(event.fullDate)) && (
-                <div className="events-category">
-                  <h3 className="category-title">🎯 Upcoming Events</h3>
-                  <div className="events-grid">
-                    {events
-                      .filter(event => isEventUpcoming(event.fullDate))
-                      .map((event) => (
-                        <EventCard 
-                          key={event.id} 
-                          event={event} 
-                          countdowns={countdowns}
-                          currentUser={currentUser}
-                          isInDashboard={isInDashboard}
-                          addToDashboard={addToDashboard}
-                          removeFromDashboard={removeFromDashboard}
-                          isUpcoming={true}
-                        />
-                      ))
-                    }
+            <div className="events-grid">
+              {events.map((event) => (
+                <div key={event.id} className="event-card">
+                  <div className="event-image-container">
+                    {event.imageURL ? (
+                      <img src={event.imageURL} alt={event.title} className="event-image" />
+                    ) : (
+                      <div className="event-image-placeholder">
+                        <span>Event Image</span>
+                      </div>
+                    )}
+                    <div className="event-date">
+                      {new Date(event.fullDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </div>
+                  </div>
+                  
+                  <div className="event-content">
+                    <h3>{event.title}</h3>
+                    <p className="event-location-small">📍 {event.location}</p>
+                    <p className="event-description">{event.description}</p>
+                    
+                    {countdowns[event.id] && (
+                      <div className="countdown-timer-small">
+                        <div className="countdown-label">Starts in:</div>
+                        <div className="timer-units">
+                          {Object.entries(countdowns[event.id]).map(([unit, value]) => (
+                            <div key={unit} className="time-unit-small">
+                              <span className="time-value-small">{value.toString().padStart(2, '0')}</span>
+                              <span className="time-label-small">{unit.charAt(0)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {currentUser ? (
+                      isInDashboard(event.id) ? (
+                        <button 
+                          onClick={() => removeFromDashboard(event.id)} 
+                          className="btn-remove-dashboard"
+                        >
+                          ✅ Saved to Dashboard
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => addToDashboard(event)} 
+                          className="btn-add-dashboard"
+                        >
+                          ➕ Save Event
+                        </button>
+                      )
+                    ) : (
+                      <button className="btn-login-prompt" disabled>
+                        🔒 Login to Save
+                      </button>
+                    )}
                   </div>
                 </div>
-              )}
-
-              {/* Past Events */}
-              {events.some(event => !isEventUpcoming(event.fullDate)) && (
-                <div className="events-category">
-                  <h3 className="category-title past-events-title">📚 Past Events</h3>
-                  <div className="events-grid">
-                    {events
-                      .filter(event => !isEventUpcoming(event.fullDate))
-                      .map((event) => (
-                        <EventCard 
-                          key={event.id} 
-                          event={event} 
-                          countdowns={countdowns}
-                          currentUser={currentUser}
-                          isInDashboard={isInDashboard}
-                          addToDashboard={addToDashboard}
-                          removeFromDashboard={removeFromDashboard}
-                          isUpcoming={false}
-                        />
-                      ))
-                    }
-                  </div>
-                </div>
-              )}
+              ))}
             </div>
           )}
         </section>
@@ -321,11 +315,7 @@ const Home = () => {
         {/* Stats */}
         <section className="stats-section">
           <div className="stat-item">
-            <div className="stat-number">{events.length}</div>
-            <div className="stat-label">Total Events</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-number">{upcomingEventsCount}</div>
+            <div className="stat-number">{events.length}+</div>
             <div className="stat-label">Upcoming Events</div>
           </div>
           <div className="stat-item">
@@ -335,6 +325,10 @@ const Home = () => {
           <div className="stat-item">
             <div className="stat-number">1K+</div>
             <div className="stat-label">Attendees</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-number">10+</div>
+            <div className="stat-label">Cities</div>
           </div>
         </section>
 
@@ -366,88 +360,6 @@ const Home = () => {
             ))}
           </div>
         </section>
-      </div>
-    </div>
-  );
-};
-
-// Event Card Component for better organization
-const EventCard = ({ 
-  event, 
-  countdowns, 
-  currentUser, 
-  isInDashboard, 
-  addToDashboard, 
-  removeFromDashboard,
-  isUpcoming 
-}) => {
-  return (
-    <div className={`event-card ${!isUpcoming ? 'past-event' : ''}`}>
-      <div className="event-image-container">
-        {event.imageURL ? (
-          <img src={event.imageURL} alt={event.title} className="event-image" />
-        ) : (
-          <div className="event-image-placeholder">
-            <span>Event Image</span>
-          </div>
-        )}
-        <div className="event-date">
-          {new Date(event.fullDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-        </div>
-        {!isUpcoming && <div className="past-event-badge">Past Event</div>}
-      </div>
-      
-      <div className="event-content">
-        <h3>{event.title}</h3>
-        <p className="event-location-small">📍 {event.location}</p>
-        <p className="event-description">{event.description}</p>
-        
-        {isUpcoming && countdowns[event.id] && (
-          <div className="countdown-timer-small">
-            <div className="countdown-label">Starts in:</div>
-            <div className="timer-units">
-              {Object.entries(countdowns[event.id]).map(([unit, value]) => (
-                <div key={unit} className="time-unit-small">
-                  <span className="time-value-small">{value.toString().padStart(2, '0')}</span>
-                  <span className="time-label-small">{unit.charAt(0)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {!isUpcoming && (
-          <div className="past-event-date">
-            Held on: {new Date(event.fullDate).toLocaleDateString("en-US", { 
-              weekday: 'short', 
-              year: 'numeric', 
-              month: 'short', 
-              day: 'numeric' 
-            })}
-          </div>
-        )}
-        
-        {currentUser ? (
-          isInDashboard(event.id) ? (
-            <button 
-              onClick={() => removeFromDashboard(event.id)} 
-              className="btn-remove-dashboard"
-            >
-              ✅ Saved to Dashboard
-            </button>
-          ) : (
-            <button 
-              onClick={() => addToDashboard(event)} 
-              className="btn-add-dashboard"
-            >
-              ➕ Save Event
-            </button>
-          )
-        ) : (
-          <button className="btn-login-prompt" disabled>
-            🔒 Login to Save
-          </button>
-        )}
       </div>
     </div>
   );
